@@ -1,0 +1,6 @@
+traindata:
+* original file: ./data/trn/trn.text
+* to be parsed by BerkeleyParser: ./data/trn/to_parsed.txt
+* parsed by BerkeleyParser: ./data/trn/trn_parsed.txt
+
+devdata and test data are similar.

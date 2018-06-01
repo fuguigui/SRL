@@ -7,29 +7,36 @@ class FGParser(object):
         self.chunker # the SVM judgement model to chunk a given sentence
         self.classer # the SVM multi-classification model on a chunk-level sentence.
         self.ClassSet=[] # saving different types and their features.
-    def train(self, train_in_file, train_out):
-        print('Reading the train data....')
-        train_in, train_in_delabel  = Transfer.Read(train_in_file)
-        print('Training the parser...')
 
+    def train(self, train_in_file,tree_file, train_out_file):
+        print('Reading the train data....')
+        train_in, train_in_delabel  = Transfer.ReadIn(train_in_file)
+        f = open(tree_file,'r')
+        train_in_tree = f.readlines()
+        f.close()
+        train_out = Transfer.ReadOut(train_out_file)
+
+        print('Training the parser...')
         # First step: train the model to chunk the input.
-        train_in_tree = Transfer.SentToTree(train_in_delabel) # the list of each sentence's tree
         train_chunk_out = Transfer.SRtoChunk(train_out)
-        train_in_feature = Transfer.ChunkFeatures(train_in, train_in_tree, train_chunk_out, if_train=True)#if_train is used to define the label attribute in features
+        train_in_feature = Transfer.ChunkFeatures(train_in, train_in_tree, if_train=True)#if_train is used to define the label attribute in features
         self.ChunkSet.extend(train_in_feature) #TODO: maybe use set instead of list, do union operation for update.
         print('Training the chunker...')
         # TODO: train the 2-judgement SVM, problem: here, we only have postive examples. What should the input be?
         self.chunker.train(train_in_feature)
 
         # Second step: train the multi-classification SVM model
-        train_out_features = Transfer.SRFeatures(train_in,train_chunk_out, train_out, if_train=True)
+        train_out_features = Transfer.SRFeatures(train_in,train_chunk_out, if_train=True)
         print('Training the classer...')
         self.classer.train(train_out_features)
 
-    def test(self, test_in_file):
+    def test(self, test_in_file,tree_file):
         print('Reading the test data...')
-        test_in, test_in_delabel  = Transfer.Read(test_in_file)
-        test_in_tree = Transfer.SentToTree(test_in_delabel)
+        test_in, test_in_delabel  = Transfer.ReadIn(test_in_file)
+        f = open(tree_file, 'r')
+        test_in_tree = f.readlines()
+        f.close()
+
         test_in_feature = Transfer.ChunkFeatures(test_in, test_in_tree,[])
         print('Testing the chunk results...')
         test_chunk_out = self.chunker.test(test_in_feature)

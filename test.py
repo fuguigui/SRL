@@ -1,4 +1,5 @@
 import utils.transferTool as Transfer
-# # Test utils.transferTool.Read and Write:
-# raw_res, in_res = Transfer.Read('./data/trn_expr.text')
-# Transfer.WriteUnlblSent(in_res, '06011002.txt')
+# Test: ReadOut and SRtoChunk
+train_out = Transfer.ReadOut('./data/trn/trn_expr.props')
+train_chunk_out = Transfer.SRtoChunk(train_out)
+print(train_chunk_out)
