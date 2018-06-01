@@ -1,0 +1,55 @@
+FGParser functions:
+---train: given two data files: train_in, train_out, train and refresh self.model
+* * * chunk(train_in, train_chunk_out): train the self.chunker
+* * * SRCclass(train_chunk_out, train_out): train the self.classer
+---test: given one data file: test_in ,using self.model to test and save the result.
+* * * test_chunk_out = self.chunker(test_in)
+* * * test_out = self.classer(test_chunk_out)
+
+train: divided into two-step:
+1. chunk the sentences:
+2. classification for SRC
+
+2018/6/1 9:17
+TODO:
+0. Unify the Data structure:
+train_in:
+中国	NR
+进出口	NN
+银行	NN
+与	CC
+中国	NR
+银行	NN
+加强	VV
+合作	NN
+
+Transfer.Read(train_in_file):
+* * * train_in_file: e.g. 'trn.trees','trn.txt'
+* * * output: raw_list, in_list. e.g.:[[中国\tNN,强\tADJ],[仓鼠\tNP,是\tVP,动物\tNN],...],[[中国,强],[仓鼠,是,动物],...]
+
+Transfer.SentToTree(train_in_delabel)
+* * * train_in_delabel: [],ele:[]. e.g.[[北京,是,个,好,地方,。],[另,一句话]]
+* * * tree: [],ele:str. e.g.: [( (S (NP (PRP 中国)) (VP (VBP 进出�?) (RB 银行) (VP (VB �?) (SBAR (IN 中国) (S (NP (NN 银行)) (VP (VBZ 加强)))))) (. 合作)) ),...]
+
+Transfer.SRtoChunk(train_out)
+ * * * train_out:[],ele:[-	(A0*,-	*,-	*,-	*,-	*,-	*A0),加强	(V*V),-	(A1*A1)	]
+ * * * chunk_out:[],ele:[], e.g.[B-A,I-A, O-A,B-V,B-A]
+
+ Transfer.ChunkFeatures(train_in, train_in_tree, train_chunk_out, if_train=True)
+ * * * train_in: [].e.g.:[[中国\tNN,强\tADJ],[仓鼠\tNP,是\tVP,动物\tNN],...]
+       trai_in_tree: [],e.g.:[( (S (NP (PRP 中国)) (VP (VBP 进出�?) (RB 银行) (VP (VB �?) (SBAR (IN 中国) (S (NP (NN 银行)) (VP (VBZ 加强)))))) (. 合作)) ),...]
+       train_chunk_out: [],ele:[],e.g.:[B-A,I-A, O-A,B-V,B-A]
+ * * * features: [],ele:Object: ChunkFeature
+
+chunker.train(train_in_feature)
+* * * train_in_feature: [], ele:Object: ChunkFeature
+
+Transfer.SRFeatures(train_in,train_chunk_out, train_out, if_train=True)
+* * * train_in: [].e.g.:[[中国\tNN,强\tADJ],[仓鼠\tNP,是\tVP,动物\tNN],...]
+      train_chunk_out: [],ele:[],e.g.:[B-A,I-A, O-A,B-V,B-A]
+      train_out:[],ele:[-	(A0*,-	*,-	*,-	*,-	*,-	*A0),加强	(V*V),-	(A1*A1)	]
+
+1. how should I design and encode features?
+2. how to train classification SVM? What if we only have positive example? Should I write a SVM class?
+3. how to use validation?
+4. how to use BerkerleyParser in this programme?
