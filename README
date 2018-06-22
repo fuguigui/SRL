@@ -49,7 +49,24 @@ Transfer.SRFeatures(train_in,train_chunk_out, train_out, if_train=True)
       train_out:[],ele:[-	(A0*,-	*,-	*,-	*,-	*,-	*A0),加强	(V*V),-	(A1*A1)	]
 
 1. how should I design and encode features?
-
+ chunk features and verb features.
 2. how to train classification SVM? What if we only have positive example? Should I write a SVM class?
+Using NBclassifier instead.
 3. how to use validation?
+
 4. how to use BerkerleyParser in this programme?
+Don't use.
+
+2018/06/02 7:54
+TODO:
+Framework: given train data, using current classifier to determine chunk. If wrong, add the wrong chunk into negative examples.
+NB classifier based on the two set: positive and negative examples, maintained by FGParser. encode the character columns.
+Then classifier the chunk, based on the positive examples. Maybe can combine verb information.
+Output the classifier result.
+
+1. Using current classifier to determine chunk.
+Greedy strategy. Given a sentence:[verb_idx, [each_item]], given a split. Then merge two adjacent items get a new split. Take the top 5 rated ones.
+Merge on the 5 ones and take top 5. Until rates stop increasing. Get the top 1 split.
+How to rate? Using NB classifier.
+
+Bugs: read chunk features interface not unified.!

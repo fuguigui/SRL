@@ -2,6 +2,7 @@ import os
 import re
 from utils.Features import *
 import pandas as pd
+import copy
 
 
 def ReadIn(filename):
@@ -112,7 +113,28 @@ def judgeSR(label, lnext, elabel):
 def TreetoHeight():
     #TODO: given a tree, get its each node's height.
     return 0
-def ChunkFeatures(label_sents, chunked=[]):
+
+def ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb):
+    chunkf_list=[]
+    for word_idx in range(len(chunk_a_verb)):
+        if ('B' in chunk_a_verb[word_idx]):
+            chunkf_list.append(word_idx)
+    # Construct chunks
+    chunks = []
+    for j in range(len(chunkf_list)):
+        begin = chunkf_list[j]
+        if(j == len(chunkf_list)-1):
+            end = len(chunk_a_verb)-1
+        else:
+            end = chunkf_list[j + 1] - 1
+        chunk = ChunkFeature()
+        chunk.Extract(begin, end, sent_a_verb[0], sent_a_verb[1])
+        label = chunk_a_verb[begin].split('-')[-1]
+        chunk.setLabel(label)
+        chunks.append(chunk)
+    return chunks
+
+def ChunkFeatures(label_sents, chunked):
     featurelist = []
     # the format of elements in featurelist: a list[idx of the verb chunk,all the chunks]
     for idx in range(len(label_sents)):
@@ -122,25 +144,12 @@ def ChunkFeatures(label_sents, chunked=[]):
         each_sent_feature=[]
         for i in range(len(sub_sent)):
             sent_a_verb = sub_sent[i] # sent_a_verb: e.g.:[10,[.. , ... , ...]]
-            chunkf_list=[]
             chunk_a_verb = sub_chunk[i]
             # Get the number of chunks in a sentence
             if(sent_a_verb[0] == -1):
                 each_sent_feature.append([-1,[]])
                 continue
-            for word_idx in range(len(chunk_a_verb)):
-                if('B' in chunk_a_verb[word_idx]):
-                    chunkf_list.append(word_idx)
-            # Construct chunks
-            chunks=[]
-            for j in range(len(chunkf_list)-1):
-                begin = chunkf_list[j]
-                end = chunkf_list[j+1]-1
-                chunk = ChunkFeature()
-                chunk.Extract(begin,end,sent_a_verb[0],sent_a_verb[1])
-                label = chunked[idx][i][begin].split('-')[-1]
-                chunk.setLabel(label)
-                chunks.append(chunk)
+            chunks = ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb)
             each_sent_feature.append([sent_a_verb[0], chunks])
         featurelist.append(each_sent_feature)
     return featurelist
@@ -165,3 +174,37 @@ def CFeatureWriteInCSV(filename, featurelist):
     name = ['label','len','position','POSchain','after_contect','before_context']
     test = pd.DataFrame(columns=name,data=list)
     test.to_csv(filename)
+
+def SplitToChunk(split_strate):
+    chunk = ['B']*(split_strate[-1][1]+1)
+    for item in split_strate:
+        beg = item[0]
+        end = item[1]
+        for i_beg in range(beg+1, end):
+            chunk[i_beg]='I'
+        if(beg<end):
+            chunk[end]='O'
+    return chunk
+
+def generateNewStrateg(cur_strategies):
+    #  checked
+    new_strateg=[]
+    for strateg in cur_strategies:
+        s_len = len(strateg)
+        if(s_len == 1):
+            continue
+        for i in range(s_len-1):
+            new_s = mergeList(i,1,strateg)
+            new_strateg.append(new_s)
+    return new_strateg
+
+def mergeList(begin, seg_num, old_list):# the format of old_list:[[0,1],[1,2],...,[10,12]]
+    # checked
+    new_list = copy.deepcopy(old_list)
+    beg_item = old_list[begin]
+    end_item = old_list[begin+seg_num]
+    new_list[begin] = [beg_item[0],end_item[1]]
+    for i in range(seg_num):
+        new_list.pop(begin+1)
+    return new_list
+
