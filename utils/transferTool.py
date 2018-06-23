@@ -4,7 +4,6 @@ from utils.Features import *
 import pandas as pd
 import copy
 
-
 def ReadIn(filename):
     in_list = []
     raw_list = []
@@ -66,6 +65,57 @@ def WriteUnlblSent(in_list,subpath, filename):
         f.write('\n')
     f.close()
 
+def WriteOut(outname, test_out, raw_sentences):
+    filepath = './data/test/'
+    if(not os.path.exists(filepath)):
+        os.makedirs(filepath)
+    out_file = os.path.join(filepath, outname)
+    f = open(out_file, 'w', encoding='utf-8')
+    for i in range(len(test_out)):
+        each_sent = test_out[i]
+        sent = raw_sentences[i]
+        groups = len(each_sent)
+        first_col = ['-']*len(sent[0][1])
+        if(len(each_sent[0]) == 0):
+            for j in range(len(first_col)):
+                f.write(first_col[j])
+                f.write('\n')
+            f.write('\n')
+            continue
+
+        fchars = [0]*groups
+        for j in range(groups):
+            v_id = sent[j][0]
+            verb = sent[j][1][v_id]
+            verb = verb.split('\t')[0]
+            first_col[v_id] = verb
+        for line in range(len(first_col)):
+            f.write(first_col[line])
+            f.write('\t')
+            for j in range(groups):
+                if(each_sent[j][line] == fchars[j]):
+                    f.write('*')
+                    if(line<len(first_col)-1):
+                        if(each_sent[j][line+1]!=fchars[j]):
+                            f.write(fchars[j]+')')
+                elif(each_sent[j][line] == 'N'):
+                    f.write('*')
+                else:
+                    fchars[j] = each_sent[j][line]
+                    f.write('('+fchars[j]+'*')
+                    if (line < len(each_sent[j]) - 1):
+                        if (each_sent[j][line + 1] != fchars[j]):
+                            f.write(fchars[j] + ')')
+                    else:
+                        f.write(fchars[j] + ')')
+                if (j == groups - 1):
+                    f.write('\n')
+                else:
+                    f.write('\t')
+        f.write('\n')
+    f.close()
+
+
 def SRtoChunk(all_out):
     chunk_list=[]
     for item_idx in range(len(all_out)):
@@ -110,46 +160,46 @@ def judgeSR(label, lnext, elabel):
             e_next = 'B'
     return cur,e_next,e_label
 
-def TreetoHeight():
-    #TODO: given a tree, get its each node's height.
-    return 0
 
-def ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb):
+def ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb, encoder, if_test = False):
     chunkf_list=[]
     for word_idx in range(len(chunk_a_verb)):
         if ('B' in chunk_a_verb[word_idx]):
             chunkf_list.append(word_idx)
     # Construct chunks
     chunks = []
-    for j in range(len(chunkf_list)):
-        begin = chunkf_list[j]
-        if(j == len(chunkf_list)-1):
-            end = len(chunk_a_verb)-1
+    begin = 0
+    for j in range(len(chunk_a_verb)):
+        chunk = ChunkFeature(encoder)
+        if(j in chunkf_list):
+            begin = j
+            label = chunk_a_verb[j].split('-')[-1]
         else:
-            end = chunkf_list[j + 1] - 1
-        chunk = ChunkFeature()
-        chunk.Extract(begin, end, sent_a_verb[0], sent_a_verb[1])
-        label = chunk_a_verb[begin].split('-')[-1]
-        chunk.setLabel(label)
+            label = chunk_a_verb[j].split('-')[-1]
+
+        chunk.Extract(begin, j, sent_a_verb[0], sent_a_verb[1],if_test=if_test)
+        if(not if_test):
+            chunk.setLabel(label)
         chunks.append(chunk)
     return chunks
 
-def ChunkFeatures(label_sents, chunked):
+def ChunkFeatures(label_sents, chunked, encoder):
     featurelist = []
     # the format of elements in featurelist: a list[idx of the verb chunk,all the chunks]
     for idx in range(len(label_sents)):
         # Deal with each sentence.
-        sub_sent=label_sents[idx]
+        sub_sent = label_sents[idx]
         sub_chunk = chunked[idx]
         each_sent_feature=[]
-        for i in range(len(sub_sent)):
+        print("the idx is: ",idx,"\n")
+        for i in range(len(sub_chunk)):
             sent_a_verb = sub_sent[i] # sent_a_verb: e.g.:[10,[.. , ... , ...]]
             chunk_a_verb = sub_chunk[i]
             # Get the number of chunks in a sentence
             if(sent_a_verb[0] == -1):
                 each_sent_feature.append([-1,[]])
                 continue
-            chunks = ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb)
+            chunks = ChunkFeaturesEachSent(sent_a_verb, chunk_a_verb, encoder)
             each_sent_feature.append([sent_a_verb[0], chunks])
         featurelist.append(each_sent_feature)
     return featurelist
@@ -186,7 +236,7 @@ def SplitToChunk(split_strate):
             chunk[end]='O'
     return chunk
 
-def generateNewStrateg(cur_strategies):
+def generateNewStrateg(v_idx,cur_strategies):
     #  checked
     new_strateg=[]
     for strateg in cur_strategies:
@@ -194,6 +244,8 @@ def generateNewStrateg(cur_strategies):
         if(s_len == 1):
             continue
         for i in range(s_len-1):
+            if(strateg[i][0] == v_idx):
+                continue
             new_s = mergeList(i,1,strateg)
             new_strateg.append(new_s)
     return new_strateg
@@ -208,3 +260,18 @@ def mergeList(begin, seg_num, old_list):# the format of old_list:[[0,1],[1,2],..
         new_list.pop(begin+1)
     return new_list
 
+def BeautifyOut(test_out):
+    for each_sent in test_out:
+        for i in range(len(each_sent)):
+            begin = 'N'
+            for j in range(len(each_sent[i])):
+                each_item = each_sent[i][j]
+                if(each_item!= 'N'):
+                    if(each_item!= begin):
+                        begin = each_item
+                else:
+                    if(begin!='V'):
+                        each_sent[i][j] = begin
+                    else:
+                        begin='N'
+    return test_out

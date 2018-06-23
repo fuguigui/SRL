@@ -35,4 +35,5 @@ import FGParser as Parser
 # Test:FGParser.train
 fgparser = Parser.FGParser()
 fgparser.train("./data/trn/trn_expr.text","./data/trn/trn_expr.props")
+fgparser.test("./data/dev/dev_expr.text")
 
